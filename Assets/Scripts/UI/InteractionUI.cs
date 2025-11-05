@@ -1,23 +1,22 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
-// On-screen UI for interaction prompts
+// Controls the UI prompt shown when the player can interact with something
 public class InteractionUI : MonoBehaviour
 {
-    // Reference the component that displays the message
-    public TextMeshProUGUI interactionText;
+    [Tooltip("UI text element used to display interaction prompts.")]
+    public TextMeshProUGUI interactionText; 
 
-    // Show the message on-screen
+    // Show an interaction prompt to the player
     public void Show(string message)
     {
-        interactionText.text = message;
-        interactionText.enabled = true;
+        interactionText.text = message; 
+        interactionText.enabled = true; 
     }
 
-    // Hide the message
+    // Hide the interaction prompt
     public void Hide()
     {
-        interactionText.enabled = false;
+        interactionText.enabled = false; 
     }
 }

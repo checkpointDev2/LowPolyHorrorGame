@@ -1,51 +1,90 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
-// Handles the detection of interactable objects in range of the player and triggering interactions
+/// <summary>
+/// Handles player interactions such as using objects and picking items up.
+/// Uses raycasting from the camera to detect objects that implement interaction.
+/// </summary>
 public class PlayerInteraction : MonoBehaviour
 {
-    public float interactionRange = 3f; // Max distance to interact
-    public LayerMask interactableLayer; // Determines which layer can be interacted with
+    [Header("Interaction Settings")]
+    [Tooltip("Maximum distance the player can interact with objects")]
+    public float interactionRange = 3f;
 
-    public InteractionUI interactionUI; // Reference to the UI script
+    [Tooltip("Layer mask for objects the player can interact with")]
+    public LayerMask interactableLayer;
 
-    private IInteractable currentInteractable; // The interactable object in range of the player
+    [Header("References")]
+    public InteractionUI interactionUI;
+
+    [Tooltip("Where picked-up items will be held")]
+    public Transform holdPoint; 
+
+    // Interface references for objects the player can interact with or pick up
+    private IInteractable currentInteractable;
+    private IPickupable currentPickupable;
+
+    // The item currently held by the player
+    private IPickupable heldItem;
 
     void Update()
     {
-        // Check for an interactable object in front of the player
         CheckForInteractable();
-
-        // Trigger interaction when looking at an object and pressing E
-        if (currentInteractable != null && Keyboard.current.eKey.wasPressedThisFrame)
+        
+        // Handle interaction input
+        if (Keyboard.current.eKey.wasPressedThisFrame)
         {
-            currentInteractable.Interact();
+            // Prioritize interacting over picking up
+            if (currentInteractable != null)
+            {
+                currentInteractable.Interact();
+            }
+            else if (currentPickupable != null)
+            {
+                currentPickupable.Pickup(holdPoint);
+                heldItem = currentPickupable;
+            }
+        }
+
+        // Handle dropping input
+        if (heldItem != null && Keyboard.current.gKey.wasPressedThisFrame)
+        {
+            heldItem.Drop();
+            heldItem = null;
         }
     }
 
-    // Raycasts forward to detect interactables
+    /// <summary>
+    /// Casts a ray from the camera forward to detect interactable or pickupable objects.
+    /// Updates UI and references based on what's found.
+    /// </summary>
     void CheckForInteractable()
-    {
+    { 
         currentInteractable = null;
+        currentPickupable = null;
 
-        // Create a ray from the camera position forward
+        // Cast a ray from the center of the camera forward
         Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
         RaycastHit hit;
 
-        // Check if the ray hits a collider on the interactable layer
         if (Physics.Raycast(ray, out hit, interactionRange, interactableLayer))
-        {
-            // Retrieve IInteractable component from collider
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
-            if (interactable != null)
+        { 
+            // Check if the object supports interaction
+            if (hit.collider.TryGetComponent(out IInteractable interactable))
             {
-                currentInteractable = interactable; // Store current interactable
-                interactionUI.Show("Press E to interact with " + hit.collider.name);
+                currentInteractable = interactable;
+                interactionUI.Show($"Press E to interact with {hit.collider.name}");
+                return;
+            }
+
+            // Check if the object can be picked up
+            if (hit.collider.TryGetComponent(out IPickupable pickupable))
+            {
+                currentPickupable = pickupable;
+                interactionUI.Show($"Press E to pick up {hit.collider.name}");
                 return;
             }
         }
 
-        // Hide UI if nothing is interactable
         interactionUI.Hide();
     }
 }
